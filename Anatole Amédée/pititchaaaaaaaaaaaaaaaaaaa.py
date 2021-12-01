@@ -309,7 +309,7 @@ class EventHandler:
 
     def jump(self):
         
-        #self.player.vy -= 10 * 1
+        self.player.vy -= 10 * 1
         
         
         if self.player.on_ground:
@@ -337,7 +337,7 @@ class EventHandler:
         print(pos_x_grille, pos_y_grille)
         
         level.tableau[pos_x_grille, pos_y_grille] = 1
-        level.init_image()
+        level.refresh_image_portion(pos_x_grille, pos_y_grille, 2, 2)
         if level.tableau[pos_x_grille, pos_y_grille + 1] != 1:
             level.tableau[pos_x_grille, pos_y_grille + 1] = 2
             
@@ -352,7 +352,7 @@ class EventHandler:
         print(pos_x_grille, pos_y_grille)
         
         level.tableau[pos_x_grille, pos_y_grille] = 0
-        level.init_image()
+        level.refresh_image_portion(pos_x_grille, pos_y_grille, 2, 2)
         if level.tableau[pos_x_grille, pos_y_grille + 1] != 1:
             level.tableau[pos_x_grille, pos_y_grille + 1] = 0
 
@@ -368,29 +368,6 @@ class Level:
         
         self.tableau = np.load("level.npy")
         
-        if False:
-        
-            self.tableau[:9, 18] = 1
-            self.tableau[8:9 , 15:18] = 1
-            self.tableau[11: 18, 14:20] = 1
-            self.tableau[22: 24, 12:20] = 1
-            self.tableau[27:29 , 10:20] = 1
-            self.tableau[36:37 ,18] = 1
-            self.tableau[40:52 , 18:20] = 1
-            self.tableau[42:52 ,16 :18] = 1
-            self.tableau[44:52 , 14:16] = 1
-            self.tableau[46:52 , 12:14] = 1
-            self.tableau[48:52 , 10:12] = 1
-            self.tableau[50:52 , 8:10] = 1
-            self.tableau[56:63 , 18] = 1
-            self.tableau[69:71 , 15:16] = 1
-            self.tableau[68:70 , 18] = 1
-            self.tableau[69:71 , 9:10] = 1 
-            self.tableau[68:70 , 12:13] = 1
-            self.tableau[69:71 , 6:7] = 1
-            self.tableau[74:75 , 6:7] = 1
-            self.tableau[78:79 , 6:7] = 1
-            self.tableau[82:83 , 6:7] = 1
 
     def init_image(self):
         self.image = pygame.Surface((TAILLE_BLOC*self.taille[0],TAILLE_BLOC*self.taille[1])).convert_alpha()
@@ -432,6 +409,21 @@ class Level:
     def save(self):
         print("yeet")
         np.save("level", self.tableau)
+        
+    def refresh_image_portion(self, x_depart, y_depart, w, h):
+        for x in range(x_depart, x_depart + w):
+            for y in range(y_depart, y_depart + h):
+                x2 = x *TAILLE_BLOC
+                y2 = y*TAILLE_BLOC
+                
+                rect = Rect(x2, y2, TAILLE_BLOC, TAILLE_BLOC)
+                if self.tableau[x, y] == 1:
+                    color = (0, 0, 0, 255)
+                else:
+                    color = (0, 0, 0, 0)
+                
+                
+                self.image.fill(color, rect)
 
 
 level = Level()
@@ -456,6 +448,7 @@ def main():
     level.ajouter_blocs_invisibles()
 
     chat.changer_detat('idle')
+    p=chat.position[1]
     
     
     while run:
@@ -474,9 +467,11 @@ def main():
         chat.update()
         chat.afficher(window)
         if chat.position[1] // 32 > 80:
-            run = False
-            print("cheh")
-        
+            chat.position[1]=200
+            chat.position[0]=200
+            chat.vy=0
+            chat.vx=0
+
         pygame.display.flip()
         
         clock.tick(40)
