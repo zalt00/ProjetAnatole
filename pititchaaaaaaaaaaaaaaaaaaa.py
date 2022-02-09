@@ -23,8 +23,12 @@ class Cam:
         
         dify = -self.posy + chat.position[1] - 300
         self.posy += dify / 10
-        if self.posy > 0:
-            self.posy = 0
+        if self.posy > +1000:
+            self.posy = +1000
+            
+        if self.posx < 0:
+            self.posx = +0
+
         
 
 TAILLE_BLOC = 32
@@ -68,6 +72,8 @@ class Chat:
         
         self.name = 'ERNESTO'
         
+        self.current_checkpoint = 0
+        
     def afficher(self, window):
         rect = Rect(self.animation_advance * self.tile_size,
                     self.animation_id * self.tile_size,
@@ -110,6 +116,12 @@ class Chat:
 
                 
     def update(self):
+
+        for (x_tab_activation, sertarien, sertariennonpluslul, identifiant) in checkpoints:
+            if self.position[0] // TAILLE_BLOC == x_tab_activation:
+                self.current_checkpoint = identifiant
+        
+        
         if self.state == 'walking':
             self.vx = self.vitesse_de_deplacement * self.direction
         elif self.state == 'running':
@@ -217,7 +229,9 @@ class EventHandler:
                 K_s: (self.sleep,),
                 K_u: (self.wake_up,),
                 1: (self.place_block,),
-                3: (self.remove_block,)
+                3: (self.remove_block,),
+                4: (self.ajouter_1_a_block_id,),
+                5: (self.retirer_1_a_block_id,)
                 }
         
         self.still_walking = False
@@ -309,7 +323,7 @@ class EventHandler:
 
     def jump(self):
         
-        #self.player.vy -= 10 * 1
+        self.player.vy -= 10 * 1
         
         
         if self.player.on_ground:
@@ -327,20 +341,46 @@ class EventHandler:
             self.player.changer_detat('idle')
             
     def place_block(self, pos):
+        mods = pygame.key.get_mods()
+        
+        shift = mods & KMOD_SHIFT
+        
+        print(level.selected_block)
+        
+        if shift:
+            liste_dpos = [(0, 0), (0, 1), (1, 0), (1, 1)]
+        else:
+            liste_dpos = [(0, 0)]
+
+        
         x, y = pos
         x += camera.posx
         y += camera.posy
         
-        pos_x_grille = int(x) // TAILLE_BLOC
-        pos_y_grille = int(y) // TAILLE_BLOC
+        pos_x_grille_de_base = int(x) // TAILLE_BLOC
+        pos_y_grille_de_base = int(y) // TAILLE_BLOC
         
-        print(pos_x_grille, pos_y_grille)
-        
-        level.tableau[pos_x_grille, pos_y_grille] = 1
-        level.init_image()
-        if level.tableau[pos_x_grille, pos_y_grille + 1] != 1:
-            level.tableau[pos_x_grille, pos_y_grille + 1] = 2
+        for (dx, dy) in liste_dpos:
             
+            pos_x_grille = pos_x_grille_de_base + dx
+            pos_y_grille = pos_y_grille_de_base + dy
+            
+            level.tableau[pos_x_grille, pos_y_grille] = 1
+            level.tableau_image[pos_x_grille, pos_y_grille] = level.selected_block + dx + dy * 10
+    
+            level.refresh_image_portion(pos_x_grille, pos_y_grille, 2, 2)
+            if level.tableau[pos_x_grille, pos_y_grille + 1] != 1:
+                level.tableau[pos_x_grille, pos_y_grille + 1] = 2
+    
+    def ajouter_1_a_block_id(self, _):
+        level.selected_block += 1
+        level.selected_block = min(level.selected_block, 139)
+    
+    def retirer_1_a_block_id(self, _):
+        level.selected_block -= 1
+        if level.selected_block == 0:
+            level.selected_block = 1
+    
     def remove_block(self, pos):
         x, y = pos
         x += camera.posx
@@ -352,7 +392,9 @@ class EventHandler:
         print(pos_x_grille, pos_y_grille)
         
         level.tableau[pos_x_grille, pos_y_grille] = 0
-        level.init_image()
+        level.tableau_image[pos_x_grille, pos_y_grille] = 0
+
+        level.refresh_image_portion(pos_x_grille, pos_y_grille, 2, 2)
         if level.tableau[pos_x_grille, pos_y_grille + 1] != 1:
             level.tableau[pos_x_grille, pos_y_grille + 1] = 0
 
@@ -362,53 +404,68 @@ class EventHandler:
 class Level:
     def __init__(self):
         
-        self.taille = (200, 100)
-        
+        self.taille = (300, 200)
         self.tableau = np.zeros(self.taille, dtype=np.int8)
-        
-        self.tableau = np.load("level.npy")
-        
-        if False:
-        
-            self.tableau[:9, 18] = 1
-            self.tableau[8:9 , 15:18] = 1
-            self.tableau[11: 18, 14:20] = 1
-            self.tableau[22: 24, 12:20] = 1
-            self.tableau[27:29 , 10:20] = 1
-            self.tableau[36:37 ,18] = 1
-            self.tableau[40:52 , 18:20] = 1
-            self.tableau[42:52 ,16 :18] = 1
-            self.tableau[44:52 , 14:16] = 1
-            self.tableau[46:52 , 12:14] = 1
-            self.tableau[48:52 , 10:12] = 1
-            self.tableau[50:52 , 8:10] = 1
-            self.tableau[56:63 , 18] = 1
-            self.tableau[69:71 , 15:16] = 1
-            self.tableau[68:70 , 18] = 1
-            self.tableau[69:71 , 9:10] = 1 
-            self.tableau[68:70 , 12:13] = 1
-            self.tableau[69:71 , 6:7] = 1
-            self.tableau[74:75 , 6:7] = 1
-            self.tableau[78:79 , 6:7] = 1
-            self.tableau[82:83 , 6:7] = 1
+        self.tableau_image = np.zeros(self.taille, dtype=np.int8)
+        tab = np.load("level.npy")
+        self.tableau[:tab.shape[0], :tab.shape[1]] = tab
+        tab2 = np.load("level_image_data.npy")
+        self.tableau_image[:tab2.shape[0], :tab2.shape[1]] = tab2
 
-    def init_image(self):
+
+        
+        
+        self.selected_block = 1
+        
+        # chargement du tileset:
+        self.tileset = pygame.image.load("inca_front.png").convert_alpha()
+        
+        self.tileset = pygame.transform.scale2x(self.tileset)
+        
+        self.find_checkpoint()
+        
+    def find_checkpoint(self):
+        cpx = None
+        
+        for x in range(self.taille[0]):
+            for y in range(self.taille[1]):
+                if cpx is None:
+                    if self.tableau_image[x, y] == 104:
+                        cpx = x
+                else:
+                    if self.tableau_image[x, y] == 105:
+                        identifiant = len(checkpoints)
+                        position_activation = cpx
+                        respawn_x = x * TAILLE_BLOC
+                        respawn_y = (y + 20) * TAILLE_BLOC
+                        checkpoints.append((position_activation, respawn_x, respawn_y, identifiant))
+                        cpx = None
+                
+    
+    def get_subsurface(self, block_id):
+        if block_id == 0:
+            img = pygame.Surface((TAILLE_BLOC, TAILLE_BLOC), SRCALPHA).convert_alpha()
+            img.fill((152, 188, 250, 255))
+            return img
+        else:
+            block_id -= 1
+            
+        rect = Rect((block_id % 10) * TAILLE_BLOC, (block_id // 10) * TAILLE_BLOC, TAILLE_BLOC, TAILLE_BLOC)
+        return self.tileset.subsurface(rect)
+        
+    def initialiser_image(self):
         self.image = pygame.Surface((TAILLE_BLOC*self.taille[0],TAILLE_BLOC*self.taille[1])).convert_alpha()
         
         for x in range(0, self.taille[0]):
             for y in range(0, self.taille[1]):
-                x2 = x *TAILLE_BLOC
-                y2 = y*TAILLE_BLOC
+                x2 = x * TAILLE_BLOC
+                y2 = y * TAILLE_BLOC
                 
                 rect = Rect(x2, y2, TAILLE_BLOC, TAILLE_BLOC)
-                if self.tableau[x, y] == 1:
-                    color = (0, 0, 0, 255)
-                else:
-                    color = (0, 0, 0, 0)
                 
-                
-                self.image.fill(color, rect)
-    
+                block_id = self.tableau_image[x, y]
+                self.image.blit(self.get_subsurface(block_id), rect)
+                    
     def ajouter_blocs_en_dessous_de_position(self, position, type_de_bloc):
         position_tableau = position[0] // TAILLE_BLOC, position[1] // TAILLE_BLOC
         
@@ -421,43 +478,65 @@ class Level:
     
     def ajouter_blocs_invisibles(self):
         for x in range(0, self.taille[0]):
-            for y in range(self.taille[1] - 1, -1, -1):
+            for y in range(self.taille[1] - 2, -1, -1):
                 if self.tableau[x, y] == 1:
-                    if y + 1 < self.taille[1] and self.tableau[x, y + 1] != 1:
+                    if self.tableau[x, y + 1] != 1:
                         self.tableau[x, y + 1] = 2
                 
     def draw(self):
         window.blit(self.image, (0 - camera.posx, 0 - camera.posy))
+        window.blit(self.get_subsurface(self.selected_block), (0, 0))
     
     def save(self):
         print("yeet")
+        np.save("level_image_data", self.tableau_image)
         np.save("level", self.tableau)
 
+        
+    def refresh_image_portion(self, x_depart, y_depart, w, h):
+        for x in range(x_depart, x_depart + w):
+            for y in range(y_depart, y_depart + h):
+                x2 = x *TAILLE_BLOC
+                y2 = y*TAILLE_BLOC
+                
+                rect = Rect(x2, y2, TAILLE_BLOC, TAILLE_BLOC)
+                block_id = self.tableau_image[x, y]
+                self.image.blit(self.get_subsurface(block_id), rect)
+
+
+checkpoints = [(-425244854544, 200, 1500, 0)]
+
+
+window = pygame.display.set_mode((800, 600))
 
 level = Level()
-window = pygame.display.set_mode((800, 600))
+
 tileset = pygame.image.load('cat.png').convert_alpha()
 
 lengths = [4, 4, 4, 4, 8, 8, 4, 6, 6, 8]
 
 camera = Cam()
 
-chat = Chat(tileset, lengths, 4, 32, 3, 1.8, [200.0, 200.0])
+chat = Chat(tileset, lengths, 4, 32, 3, 1.8, [200.0, 300.0])
 event_handler = EventHandler(chat)
 
 
+
+
 def main():
-    
+    f = pygame.Surface((5000, 5000), SRCALPHA)
+    opacity = 255
     run = True
 
     clock = pygame.time.Clock()    
 
-    level.init_image()
+    level.initialiser_image()
     level.ajouter_blocs_invisibles()
 
     chat.changer_detat('idle')
+    p=chat.position[1]
     
-    
+    print(checkpoints)
     while run:
         
         for event in pygame.event.get():
@@ -468,15 +547,22 @@ def main():
         
         camera.update()
         
-        window.fill((50, 200, 200))
+        #window.fill((50, 200, 200))
         level.draw()
         
         chat.update()
         chat.afficher(window)
         if chat.position[1] // 32 > 80:
-            run = False
-            print("cheh")
-        
+            chat.position[1]=checkpoints[chat.current_checkpoint][2]
+            chat.position[0]=checkpoints[chat.current_checkpoint][1]
+            chat.vy=0
+            chat.vx=0
+            
+        if opacity > 1:
+            f.fill((0, 0, 0, opacity))
+            window.blit(f, (0, 0))
+            opacity -= 3
+
         pygame.display.flip()
         
         clock.tick(40)
